@@ -1,0 +1,101 @@
+---
+title: "Divvy_trip_data"
+author: "Irum Hassan"
+date: "2023-09-16"
+output: html_document
+---
+
+```{r  
+# Load the necessary libraries
+library(readr)
+library(lubridate)
+library(ggplot2)
+library(gridExtra)
+
+# Step 1: Read the data
+divy_tripdata <- read_csv("path_to_your_file.csv")
+
+# Step 2: Data Cleaning
+# Convert date-time columns to POSIXct format
+divy_tripdata$started_at <- as.POSIXct(divy_tripdata$started_at, format = "%Y-%m-%d %H:%M:%S")
+divy_tripdata$ended_at <- as.POSIXct(divy_tripdata$ended_at, format = "%Y-%m-%d %H:%M:%S")
+
+# Handle negative trip durations (crossing midnight)
+negative_duration <- divy_tripdata$trip_duration < 0
+divy_tripdata$trip_duration[negative_duration] <- divy_tripdata$trip_duration[negative_duration] + (24 * 60 * 60)
+
+# Calculate trip duration in minutes
+divy_tripdata$trip_duration <- as.numeric(difftime(divy_tripdata$ended_at, divy_tripdata$started_at, units = "mins"))
+
+# Check for missing values and fill them
+# (Code for handling missing values)
+
+# Remove rows with negative trip durations
+divvy_trip_data <- divy_tripdata[divy_tripdata$trip_duration > 1, ]
+
+# Step 3: Data Exploration
+# Split the data into members and casual customers
+members_data <- divvy_trip_data[divvy_trip_data$member_casual == "member", ]
+casual_data <- divvy_trip_data[divvy_trip_data$member_casual == "casual", ]
+
+# Step 4: Summary Statistics
+# Calculate summary statistics for members_data and casual_data
+sum_members <- summary(members_data)
+sum_casual <- summary(casual_data)
+
+# Step 5: Data Visualization
+# Create bar charts for rideable types
+plot_rideable_type <- function(data, title) {
+  ggplot(data, aes(x = rideable_type, fill = rideable_type)) +
+    geom_bar() +
+    labs(title = title, x = "Ride Type", y = "Frequency") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "none")
+}
+
+plot_member <- plot_rideable_type(members_data, "Member Rideable Types")
+plot_casual <- plot_rideable_type(casual_data, "Casual Rideable Types")
+
+# Create a side-by-side bar chart
+combined_plot <- grid.arrange(plot_member, plot_casual, ncol = 2)
+ 
+# create a map showing the starting and the ending destination
+
+# Load the necessary library
+library(leaflet)
+
+# Create a leaflet map
+m <- leaflet() %>%
+  addTiles()  # Add a tile layer (you can choose different map styles)
+
+# Add markers for starting locations
+m <- addCircleMarkers(
+  map = m,  # Use the existing map
+  data = divvy_trip_data,
+  lng = ~start_lng,
+  lat = ~start_lat,
+  label = "Start",  # Label for starting location
+  color = "blue",   # Marker color for starting location
+  radius = 5        # Marker size
+)
+
+# Add markers for ending locations
+m <- addCircleMarkers(
+  map = m,  # Use the existing map
+  data = divvy_trip_data,
+  lng = ~end_lng,
+  lat = ~end_lat,
+  label = "End",    # Label for ending location
+  color = "red",    # Marker color for ending location
+  radius = 5        # Marker size
+)
+
+# Display the map
+m
+ 
+}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+ 
